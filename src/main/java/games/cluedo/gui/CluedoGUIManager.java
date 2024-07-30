@@ -10,6 +10,9 @@ import players.human.ActionController;
 import java.util.Set;
 
 public class CluedoGUIManager extends AbstractGUIManager {
+    CluedoDeckView[] playerCards;
+
+
     public CluedoGUIManager(GamePanel parent, Game game, ActionController ac, Set<Integer> human) {
         super(parent, game, ac, human);
     }

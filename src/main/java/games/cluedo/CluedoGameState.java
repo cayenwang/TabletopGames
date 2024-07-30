@@ -8,10 +8,7 @@ import core.interfaces.IGamePhase;
 import games.GameType;
 import games.cluedo.cards.CluedoCard;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class CluedoGameState extends AbstractGameState {
 
@@ -23,6 +20,9 @@ public class CluedoGameState extends AbstractGameState {
     // Room names where each character is at, index corresponds to character index as defined above
     List<String> characterLocations;
 
+    // List of whether each player has made an incorrect accusation (and is thus no longer allowed to make suggestions)
+    List<Boolean> playerAliveStatus;
+
     // All cards in the game
     // (useful for implementing suggestions; only have to search through one deck to find the card you're suggesting)
     PartialObservableDeck<CluedoCard> allCards;
@@ -33,9 +33,10 @@ public class CluedoGameState extends AbstractGameState {
     // Suggestion being made by current player
     public PartialObservableDeck<CluedoCard> currentGuess;
 
-    CluedoTurnOrder turnOrder;
+    Queue<Integer> turnOrderQueue;
+    Queue<Integer> reactivePlayers;
     // ID of player whose turn it is (ie the player who made the suggestion)
-    int currentTurnPlayerId; // TODO this should be turnOwner; turnOwner should be currentPlayer
+    int currentTurnPlayerId;
 
     /**
      * @param gameParameters - game parameters.
@@ -43,11 +44,6 @@ public class CluedoGameState extends AbstractGameState {
      */
     public CluedoGameState(AbstractParameters gameParameters, int nPlayers) {
         super(gameParameters, nPlayers);
-        turnOrder = _createTurnOrder(nPlayers);
-    }
-
-    protected CluedoTurnOrder _createTurnOrder(int nPlayers){
-        return new CluedoTurnOrder(nPlayers);
     }
 
     @Override
@@ -68,24 +64,31 @@ public class CluedoGameState extends AbstractGameState {
         CluedoGameState copy = new CluedoGameState(gameParameters, playerId);
 
         copy.gameBoard = gameBoard.copy();
+
         copy.characterToPlayerMap = new HashMap<>();
+        for (int i : characterToPlayerMap.keySet()) {
+            copy.characterToPlayerMap.put(i, characterToPlayerMap.get(i));
+        }
         copy.characterLocations = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            copy.characterLocations.add(characterLocations.get(i));
+        }
+        copy.playerAliveStatus = new ArrayList<>();
+        copy.playerAliveStatus.addAll(playerAliveStatus);
+
         copy.allCards = allCards.copy();
         copy.playerHandCards = new ArrayList<>();
+        for (int i = 0; i < nPlayers; i++) {
+            copy.playerHandCards.add(playerHandCards.get(i).copy());
+        }
         copy.caseFile = caseFile.copy();
         copy.currentGuess = currentGuess.copy();
-        copy.turnOrder = (CluedoTurnOrder) turnOrder.copy();
-        copy.currentTurnPlayerId = currentTurnPlayerId;
 
-        for (int i = 0; i < 6; i++) {
-            if (characterToPlayerMap.containsKey(i)) {
-                copy.characterToPlayerMap.put(i, characterToPlayerMap.get(i));
-            }
-            copy.characterLocations.add(characterLocations.get(i));
-            if (i < nPlayers) {
-                copy.playerHandCards.add(playerHandCards.get(i).copy());
-            }
-        }
+        copy.turnOrderQueue = new LinkedList<>();
+        copy.turnOrderQueue.addAll(turnOrderQueue);
+        copy.reactivePlayers = new LinkedList<>();
+        copy.reactivePlayers.addAll(reactivePlayers);
+        copy.currentTurnPlayerId = currentTurnPlayerId;
 
         if (playerId != -1) {
             // Add all cards that are not visible to the current player into a deck
@@ -127,12 +130,18 @@ public class CluedoGameState extends AbstractGameState {
     }
 
     @Override
-    protected double _getHeuristicScore(int playerId) { // TODO Heuristic Score
-        return 0;
+    protected double _getHeuristicScore(int playerId) {
+        int score = 0;
+        for (int i = 0; i<allCards.getSize(); i++) {
+            boolean visible = allCards.getVisibilityForPlayer(i, playerId);
+            if (visible) score ++;
+        }
+        return score;
     }
 
     @Override
-    public double getGameScore(int playerId) { // TODO Game Score
+    public double getGameScore(int playerId) {
+        if (playerResults[playerId] == CoreConstants.GameResult.WIN_GAME) return 1;
         return 0;
     }
 
@@ -143,18 +152,21 @@ public class CluedoGameState extends AbstractGameState {
         return Objects.equals(gameBoard, that.gameBoard)
                 && Objects.equals(characterToPlayerMap, that.characterToPlayerMap)
                 && Objects.equals(characterLocations, that.characterLocations)
+                && Objects.equals(playerAliveStatus, that.playerAliveStatus)
                 && Objects.equals(allCards, that.allCards)
                 && Objects.equals(playerHandCards, that.playerHandCards)
                 && Objects.equals(caseFile, that.caseFile)
                 && Objects.equals(currentGuess, that.currentGuess)
-                && Objects.equals(turnOrder, that.turnOrder)
+                && Objects.equals(turnOrderQueue, that.turnOrderQueue)
+                && Objects.equals(reactivePlayers, that.reactivePlayers)
                 && Objects.equals(currentTurnPlayerId, that.currentTurnPlayerId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(gameBoard, characterToPlayerMap, characterLocations, allCards, playerHandCards,
-                caseFile, currentGuess, turnOrder, currentTurnPlayerId) + 31 * super.hashCode();
+        return Objects.hash(gameBoard, characterToPlayerMap, characterLocations, playerAliveStatus,
+                allCards, playerHandCards, caseFile, currentGuess,
+                turnOrderQueue, reactivePlayers, currentTurnPlayerId) + 31 * super.hashCode();
     }
 
     public enum CluedoGamePhase implements IGamePhase {

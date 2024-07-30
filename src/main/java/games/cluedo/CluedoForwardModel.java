@@ -8,8 +8,13 @@ import core.actions.DoNothing;
 import core.components.BoardNode;
 import core.components.GraphBoard;
 import core.components.PartialObservableDeck;
-import games.cluedo.actions.*;
-import games.cluedo.cards.*;
+import games.cluedo.actions.ChooseCharacter;
+import games.cluedo.actions.GuessPartOfCaseFile;
+import games.cluedo.actions.ShowHintCard;
+import games.cluedo.cards.CharacterCard;
+import games.cluedo.cards.CluedoCard;
+import games.cluedo.cards.RoomCard;
+import games.cluedo.cards.WeaponCard;
 
 import java.util.*;
 
@@ -22,9 +27,12 @@ public class CluedoForwardModel extends StandardForwardModel {
         cgs.gameBoard = new GraphBoard("Game Board");
         cgs.characterToPlayerMap = new HashMap<>();
         cgs.characterLocations = new ArrayList<>();
+        cgs.playerAliveStatus = new ArrayList<>(Collections.nCopies(cgs.getNPlayers(), Boolean.TRUE));
         cgs.playerHandCards = new ArrayList<>();
         cgs.caseFile = new PartialObservableDeck<>("Case File", -1, new boolean[cgs.getNPlayers()]);
         cgs.currentGuess = new PartialObservableDeck<>("Current Guess", -1, new boolean[cgs.getNPlayers()]);
+        cgs.turnOrderQueue = new LinkedList<>();
+        cgs.reactivePlayers = new LinkedList<>();
 
         // Initialise the board // TODO change the initialisation so that we can include 'corridor' segments
         BoardNode startNode = new BoardNode(CluedoConstants.Room.values().length, "START");
@@ -106,6 +114,11 @@ public class CluedoForwardModel extends StandardForwardModel {
         // Set the first gamePhase to be choosing characters
         cgs.setGamePhase(CluedoGameState.CluedoGamePhase.chooseCharacter);
 
+        // Set the initial turn order to be ordered by increasing playerId
+        for (int i=1; i<cgs.getNPlayers(); i++) {
+            cgs.turnOrderQueue.add(i);
+        }
+
     }
 
     @Override
@@ -113,54 +126,55 @@ public class CluedoForwardModel extends StandardForwardModel {
         CluedoGameState cgs = (CluedoGameState) gameState;
         List<AbstractAction> actions = new ArrayList<>();
 
-        System.out.println("========== "+ cgs.getGamePhase()+" "+cgs.turnOrder.getTurnOwner()+ " ==========");
-
-        if (cgs.getGamePhase() == CluedoGameState.CluedoGamePhase.chooseCharacter) {
-            // Player can choose any unchosen character
-            for (int i=0; i<CluedoConstants.Character.values().length; i++) {
-                if (!cgs.characterToPlayerMap.containsKey(i)) {
-                    actions.add(new ChooseCharacter(cgs.turnOrder.getTurnOwner(), i));
-                }
-            }
-
-        } else if (cgs.getGamePhase() == CluedoGameState.CluedoGamePhase.makeSuggestion
-                    || cgs.getGamePhase() == CluedoGameState.CluedoGamePhase.makeAccusation) {
-            int currentGuessSize = cgs.currentGuess.getSize();
-
-            if (currentGuessSize == 0) { // First, the player guesses a room
-                for (CluedoConstants.Room room : CluedoConstants.Room.values()) {
-                    actions.add(new GuessPartOfCaseFile(cgs, room));
-                }
-            } else if (currentGuessSize == 1) { // Second, the player guesses a character
-                for (CluedoConstants.Character character : CluedoConstants.Character.values()) {
-                    actions.add(new GuessPartOfCaseFile(cgs, character));
-                }
-            } else if (currentGuessSize == 2) { // Finally, the player guesses a weapon
-                for (CluedoConstants.Weapon weapon : CluedoConstants.Weapon.values()) {
-                    actions.add(new GuessPartOfCaseFile(cgs, weapon));
-                }
-            }
-
-        } else if (cgs.getGamePhase() == CluedoGameState.CluedoGamePhase.revealCards) {
-            if (cgs.turnOrder.getTurnOwner() == cgs.currentTurnPlayerId) {
-                actions.add(new DoNothing());
-            } else {
-                PartialObservableDeck<CluedoCard> playerHand = cgs.getPlayerHandCards().get(cgs.turnOrder.getTurnOwner());
-                for (int i=0; i<playerHand.getSize(); i++) {
-                    if (cgs.currentGuess.contains(playerHand.get(i))) {
-                        actions.add(new ShowHintCard(cgs.turnOrder.getTurnOwner(), cgs.currentTurnPlayerId, i));
+        switch (cgs.getGamePhase().toString()) {
+            case "chooseCharacter":
+                // Player can choose any unchosen character
+                for (int i=0; i<CluedoConstants.Character.values().length; i++) {
+                    if (!cgs.characterToPlayerMap.containsKey(i)) {
+                        actions.add(new ChooseCharacter(cgs.getCurrentPlayer(), i));
                     }
                 }
-                if (actions.isEmpty()) {
-                    actions.add(new DoNothing());
+                break;
+            case "makeSuggestion":
+            case "makeAccusation":
+                int currentGuessSize = cgs.currentGuess.getSize();
+
+                if (currentGuessSize == 0) { // First, the player guesses a room
+                    for (CluedoConstants.Room room : CluedoConstants.Room.values()) {
+                        actions.add(new GuessPartOfCaseFile(cgs, room));
+                    }
+                } else if (currentGuessSize == 1) { // Second, the player guesses a character
+                    for (CluedoConstants.Character character : CluedoConstants.Character.values()) {
+                        actions.add(new GuessPartOfCaseFile(cgs, character));
+                    }
+                } else if (currentGuessSize == 2) { // Finally, the player guesses a weapon
+                    for (CluedoConstants.Weapon weapon : CluedoConstants.Weapon.values()) {
+                        actions.add(new GuessPartOfCaseFile(cgs, weapon));
+                    }
                 }
-            }
+                break;
+            case "revealCards":
+                if (cgs.getCurrentPlayer() == cgs.currentTurnPlayerId) {
+                    actions.add(new DoNothing()); // TODO implement skip currentPlayer in revealCards phase
+                } else {
+                    PartialObservableDeck<CluedoCard> playerHand = cgs.getPlayerHandCards().get(cgs.getCurrentPlayer());
+                    for (int i=0; i<playerHand.getSize(); i++) {
+                        if (cgs.currentGuess.contains(playerHand.get(i))) {
+                            actions.add(new ShowHintCard(cgs.getCurrentPlayer(), cgs.currentTurnPlayerId, i));
+                        }
+                    }
+                    if (actions.isEmpty()) {
+                        actions.add(new DoNothing());
+                    }
+                }
+                break;
         }
 
         if (cgs.getGamePhase() == CluedoGameState.CluedoGamePhase.makeAccusation
                 && cgs.currentGuess.getSize() == 0) {
             actions.add(new DoNothing()); // choose to not accuse
         }
+
         return actions;
     }
 
@@ -168,107 +182,121 @@ public class CluedoForwardModel extends StandardForwardModel {
     protected void _afterAction(AbstractGameState gameState, AbstractAction action) {
         CluedoGameState cgs = (CluedoGameState) gameState;
 
-        if (cgs.getGamePhase() == CluedoGameState.CluedoGamePhase.chooseCharacter) {
-            cgs.turnOrder.setTurnOwner(cgs.turnOrder.nextPlayer(cgs));
-            if (cgs.characterToPlayerMap.size() == cgs.getNPlayers()) {
-                // Change turn order to be in order of character index, rather than playerId
-                cgs.turnOrder.setTurnOrder(cgs.characterToPlayerMap);
-
-                // set the next player
-                cgs.turnOrder.setTurnOwner(cgs.turnOrder.getNextPlayer());
-
-                cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
-
-                System.out.println(cgs.characterToPlayerMap);
-            }
-
-        } else if (cgs.getGamePhase() == CluedoGameState.CluedoGamePhase.makeSuggestion) {
-            cgs.currentTurnPlayerId = cgs.turnOrder.getTurnOwner();
-            if (cgs.currentGuess.getSize() == 1) { // last action was to suggest a room
-                // Get current character index
-                int currentCharacterIndex = -1;
-                for (int key : cgs.characterToPlayerMap.keySet()) {
-                    if (cgs.characterToPlayerMap.get(key) == cgs.turnOrder.getTurnOwner()) {
-                        currentCharacterIndex = key;
-                    }
-                }
-                // Move the character to the room
-                cgs.characterLocations.set(currentCharacterIndex, cgs.currentGuess.get(0).toString());
-            }
-            if (cgs.currentGuess.getSize() == 2) { // last action was to suggest a character
-                // Get suggested character index
-                int suggestedCharacterIndex = CluedoConstants.Character.valueOf(cgs.currentGuess.get(0).toString()).ordinal();
-                // Move the character to the room
-                cgs.characterLocations.set(suggestedCharacterIndex, cgs.currentGuess.get(1).toString());
-            }
-            if (cgs.currentGuess.getSize() == 3) { // last action was to suggest a weapon
-                // add all players to reactive turn order (excluding current player) in order of character index
-                cgs.turnOrder.addReactivePlayer(cgs.turnOrder.playerQueue);
-                // set the next player
-                cgs.turnOrder.setTurnOwner(cgs.turnOrder.getNextPlayer());
-
-                cgs.setGamePhase(CluedoGameState.CluedoGamePhase.revealCards);
-            }
-
-        } else if (cgs.getGamePhase() == CluedoGameState.CluedoGamePhase.revealCards) {
-            if (cgs.turnOrder.getTurnOwner() == cgs.currentTurnPlayerId) {
-                cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeAccusation);
-                cgs.currentGuess.clear();
-            } else {
-                if (action instanceof DoNothing) {
-                    cgs.turnOrder.setTurnOwner(cgs.turnOrder.getNextPlayer());
+        switch (cgs.getGamePhase().toString()) {
+            case "chooseCharacter":
+                if (cgs.characterToPlayerMap.size() != cgs.getNPlayers()) {
+                    endRound(cgs, nextPlayer(cgs));
                 } else {
-                    cgs.turnOrder.resetReactivePlayers();
-                    cgs.turnOrder.setTurnOwner(cgs.currentTurnPlayerId);
+                    // Change turn order to be in order of character index, rather than playerId
+                    setPlayerOrder(cgs, cgs.characterToPlayerMap);
+
+                    // set the next player
+                    endRound(cgs, nextPlayer(cgs));
+                    cgs.currentTurnPlayerId = cgs.getCurrentPlayer();
+
+                    cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
+                }
+                break;
+            case "makeSuggestion":
+                if (cgs.currentGuess.getSize() == 1) { // last action was to suggest a room
+                    // Get current character index
+                    int currentCharacterIndex = -1;
+                    for (int key : cgs.characterToPlayerMap.keySet()) {
+                        if (cgs.characterToPlayerMap.get(key) == cgs.getCurrentPlayer()) {
+                            currentCharacterIndex = key;
+                        }
+                    }
+                    // Move the character to the room
+                    cgs.characterLocations.set(currentCharacterIndex, cgs.currentGuess.get(0).toString());
+                }
+                if (cgs.currentGuess.getSize() == 2) { // last action was to suggest a character
+                    // Get suggested character index
+                    int suggestedCharacterIndex = CluedoConstants.Character.valueOf(cgs.currentGuess.get(0).toString()).ordinal();
+                    // Move the character to the room
+                    cgs.characterLocations.set(suggestedCharacterIndex, cgs.currentGuess.get(1).toString());
+                }
+                if (cgs.currentGuess.getSize() == 3) { // last action was to suggest a weapon
+                    cgs.currentTurnPlayerId = cgs.getCurrentPlayer();
+                    // add all players to reactive turn order (excluding current player) in order of character index
+                    cgs.reactivePlayers.addAll(cgs.turnOrderQueue);
+
+                    // set the next player
+                    endRound(cgs, nextPlayer(cgs));
+
+                    cgs.setGamePhase(CluedoGameState.CluedoGamePhase.revealCards);
+                }
+                break;
+            case "revealCards":
+                if (cgs.getCurrentPlayer() == cgs.currentTurnPlayerId) {
                     cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeAccusation);
                     cgs.currentGuess.clear();
-                }
-            }
-
-        } else if (cgs.getGamePhase() == CluedoGameState.CluedoGamePhase.makeAccusation) {
-            if (action instanceof DoNothing) {
-                cgs.turnOrder.setTurnOwner(cgs.turnOrder.getNextPlayer());
-                cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
-                cgs.currentGuess.clear();
-            }
-            if (cgs.currentGuess.getSize() == 3) {
-                System.out.println(guessMatchesCaseFile(cgs));
-                if (guessMatchesCaseFile(cgs)) {
-                    cgs.setGameStatus(CoreConstants.GameResult.GAME_END);
-                    for (int i=0; i < cgs.getNPlayers(); i++) {
-                        cgs.setPlayerResult(CoreConstants.GameResult.LOSE_GAME, i);
-                    }
-                    cgs.setPlayerResult(CoreConstants.GameResult.WIN_GAME, cgs.turnOrder.getTurnOwner());
-                    System.out.println("WIN");
                 } else {
-                    System.out.println("in failed accusation");
-                    cgs.setPlayerResult(CoreConstants.GameResult.LOSE_GAME, cgs.turnOrder.getTurnOwner());
-
-                    if (!Arrays.asList(cgs.getPlayerResults()).contains(CoreConstants.GameResult.GAME_ONGOING)) {
-                        cgs.setGameStatus(CoreConstants.GameResult.GAME_END);
-                        System.out.println("in gameEnd");
-                        for (int i=0; i < cgs.getNPlayers(); i++) {
-                            cgs.setPlayerResult(CoreConstants.GameResult.LOSE_GAME, i);
-                        }
+                    if (action instanceof DoNothing) {
+                        endRound(cgs, nextPlayer(cgs));
                     } else {
-                        System.out.println("in gameContinue");
-                        int nextPlayer = cgs.turnOrder.getNextPlayer();
-                        while (!cgs.getPlayerResults()[nextPlayer].equals(CoreConstants.GameResult.GAME_ONGOING)) {
-                            nextPlayer = cgs.turnOrder.getNextPlayer();
-                            System.out.println("in while");
-                        }
-                        cgs.turnOrder.setTurnOwner(nextPlayer);
-                        cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
+                        cgs.reactivePlayers.clear();
+                        endRound(cgs, cgs.currentTurnPlayerId);
+                        cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeAccusation);
                         cgs.currentGuess.clear();
                     }
                 }
-            }
+                break;
+            case "makeAccusation":
+                if (action instanceof DoNothing) {
+                    endRound(cgs, nextPlayer(cgs));
+                    cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
+                    cgs.currentGuess.clear();
+                }
+                if (cgs.currentGuess.getSize() == 3) {
+                    if (guessMatchesCaseFile(cgs)) {
+                        cgs.setGameStatus(CoreConstants.GameResult.GAME_END);
+                        for (int i=0; i < cgs.getNPlayers(); i++) {
+                            cgs.setPlayerResult(CoreConstants.GameResult.LOSE_GAME, i);
+                        }
+                        cgs.setPlayerResult(CoreConstants.GameResult.WIN_GAME, cgs.getCurrentPlayer());
+                    } else {
+                        cgs.playerAliveStatus.set(cgs.getCurrentPlayer(), false);
+                        if (!(cgs.playerAliveStatus.contains(true))) {
+                            cgs.setGameStatus(CoreConstants.GameResult.GAME_END);
+                            for (int i=0; i < cgs.getNPlayers(); i++) {
+                                cgs.setPlayerResult(CoreConstants.GameResult.LOSE_GAME, i);
+                            }
+                        } else {
+                            endRound(cgs, nextPlayer(cgs));
+                            cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
+                            cgs.currentGuess.clear();
+                        }
+                    }
+                }
+                break;
         }
     }
 
     private boolean guessMatchesCaseFile(AbstractGameState gameState) {
         CluedoGameState cgs = (CluedoGameState) gameState;
         return cgs.currentGuess.equals(cgs.caseFile);
+    }
+
+    protected int nextPlayer(AbstractGameState gameState) {
+        CluedoGameState cgs = (CluedoGameState) gameState;
+        if (!cgs.reactivePlayers.isEmpty()) {
+            return cgs.reactivePlayers.remove();
+        } else {
+            while (!cgs.playerAliveStatus.get(cgs.turnOrderQueue.peek())) {
+                cgs.turnOrderQueue.add(cgs.turnOrderQueue.peek());
+                cgs.turnOrderQueue.remove();
+            }
+            cgs.turnOrderQueue.add(cgs.turnOrderQueue.peek());
+            return cgs.turnOrderQueue.remove();
+        }
+    }
+
+    public void setPlayerOrder(AbstractGameState gameState, HashMap<Integer, Integer> characterToPlayerMap) {
+        CluedoGameState cgs = (CluedoGameState) gameState;
+        cgs.turnOrderQueue.clear();
+        for (int i : characterToPlayerMap.keySet()) {
+            cgs.turnOrderQueue.add(characterToPlayerMap.get(i));
+        }
     }
 
 }

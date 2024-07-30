@@ -115,7 +115,7 @@ public class TestCluedo {
         cfm.next(cgs, cfm.computeAvailableActions(cgs).get(3));
 
         // Assert we have moved to the second player
-        assertEquals(1, cgs.turnOrder.getTurnOwner());
+        assertEquals(1, cgs.getCurrentPlayer());
         // Assert the second player can choose from any character except REV_GREEN
         List<AbstractAction> actions1 = cfm.computeAvailableActions(cgs);
         assertEquals(List.of(0,1,2,4,5), computeAvailableCharacterIndexes(actions1));
@@ -125,7 +125,7 @@ public class TestCluedo {
 
         if (players.size() != 2) {
             // Assert we have moved to the third player
-            assertEquals(2, cgs.turnOrder.getTurnOwner());
+            assertEquals(2, cgs.getTurnOwner());
             // Assert the third player can choose from any character except REV_GREEN and COL_MUSTARD
             List<AbstractAction> actions2 = cfm.computeAvailableActions(cgs);
             assertEquals(List.of(0,2,4,5), computeAvailableCharacterIndexes(actions2));
@@ -152,7 +152,7 @@ public class TestCluedo {
         int expectedFirstPlayer;
         if (players.size() == 2) { expectedFirstPlayer = 1; }
         else { expectedFirstPlayer = 2; }
-        assertEquals(expectedFirstPlayer, cgs.turnOrder.getTurnOwner());
+        assertEquals(expectedFirstPlayer, cgs.getCurrentPlayer());
     }
 
     private List<Integer> computeAvailableCharacterIndexes(List<AbstractAction> actions) {
@@ -171,8 +171,8 @@ public class TestCluedo {
         for (int i = 0; i < players.size(); i++) {
             cgs.characterToPlayerMap.put(playerToCharacter.get(i), i);
         }
-        cgs.turnOrder.setTurnOrder(cgs.characterToPlayerMap);
-        cgs.turnOrder.setTurnOwner(cgs.turnOrder.getNextPlayer());
+        cfm.setPlayerOrder(cgs, cgs.characterToPlayerMap);
+        cfm.endRound(cgs, cfm.nextPlayer(cgs));
         cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
 
         // ^^^^^ SETUP ^^^^^
@@ -208,7 +208,7 @@ public class TestCluedo {
         int expectedNextPlayer;
         if (players.size() == 2) { expectedNextPlayer = 0; }
         else { expectedNextPlayer = 1; }
-        assertEquals(expectedNextPlayer, cgs.turnOrder.getTurnOwner());
+        assertEquals(expectedNextPlayer, cgs.getTurnOwner());
     }
 
     private List<String> computeAvailableGuessNames(List<AbstractAction> actions) {
@@ -217,6 +217,24 @@ public class TestCluedo {
             availableGuessNames.add(((GuessPartOfCaseFile) availableAction).getGuessName());
         }
         return availableGuessNames;
+    }
+
+    @Test
+    public void testRevealingCards() {
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+        // TODO more unit tests
+    }
+
+    @Test
+    public void testMakingAssertion() {
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+
+    }
+
+    @Test
+    public void testGameEnd() {
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+
     }
 
 }
