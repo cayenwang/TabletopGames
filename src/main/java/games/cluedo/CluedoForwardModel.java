@@ -8,6 +8,8 @@ import core.actions.DoNothing;
 import core.components.BoardNode;
 import core.components.GraphBoard;
 import core.components.PartialObservableDeck;
+import core.properties.PropertyString;
+import core.properties.PropertyVector2D;
 import games.cluedo.actions.ChooseCharacter;
 import games.cluedo.actions.GuessPartOfCaseFile;
 import games.cluedo.actions.ShowHintCard;
@@ -15,6 +17,7 @@ import games.cluedo.cards.CharacterCard;
 import games.cluedo.cards.CluedoCard;
 import games.cluedo.cards.RoomCard;
 import games.cluedo.cards.WeaponCard;
+import utilities.Vector2D;
 
 import java.util.*;
 
@@ -91,19 +94,28 @@ public class CluedoForwardModel extends StandardForwardModel {
         cgs.allCards.shuffle(cgs.getRnd());
 
         for (int i=0; i<cgs.getNPlayers(); i++) {
-            boolean[] visible = new boolean[cgs.getNPlayers()];
-            visible[i] = true;
-            PartialObservableDeck<CluedoCard> playerCards = new PartialObservableDeck<>("Player Cards", i, visible);
+            // Create the player hands
+            PartialObservableDeck<CluedoCard> playerCards = new PartialObservableDeck<>("Player Cards", i, new boolean[cgs.getNPlayers()]);
             cgs.playerHandCards.add(playerCards);
         }
 
         int cardCount = 0;
         while (cardCount < cgs.allCards.getSize()) {
+            // Deal all the cards out to the players
             int playerId = cardCount % cgs.getNPlayers();
             CluedoCard c = cgs.allCards.peek(cardCount);
             c.setOwnerId(playerId);
             cgs.playerHandCards.get(playerId).add(c);
             cardCount += 1;
+        }
+
+        for (int i=0; i<cgs.getNPlayers(); i++) {
+            // Set the visibility of each card
+            boolean[] visible = new boolean[cgs.getNPlayers()];
+            visible[i] = true;
+            for (int j=0; j<cgs.getPlayerHandCards().get(i).getSize(); j++) {
+                cgs.getPlayerHandCards().get(i).setVisibilityOfComponent(j, visible);
+            }
         }
 
         // Add the cards in the caseFile to the deck of all cards for completeness
@@ -118,7 +130,6 @@ public class CluedoForwardModel extends StandardForwardModel {
         for (int i=1; i<cgs.getNPlayers(); i++) {
             cgs.turnOrderQueue.add(i);
         }
-
     }
 
     @Override
@@ -155,7 +166,7 @@ public class CluedoForwardModel extends StandardForwardModel {
                 break;
             case "revealCards":
                 if (cgs.getCurrentPlayer() == cgs.currentTurnPlayerId) {
-                    actions.add(new DoNothing()); // TODO implement skip currentPlayer in revealCards phase
+                    actions.add(new DoNothing());
                 } else {
                     PartialObservableDeck<CluedoCard> playerHand = cgs.getPlayerHandCards().get(cgs.getCurrentPlayer());
                     for (int i=0; i<playerHand.getSize(); i++) {

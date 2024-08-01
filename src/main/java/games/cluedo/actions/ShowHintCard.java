@@ -57,4 +57,8 @@ public class ShowHintCard extends AbstractAction {
                 "toPlayer=" + (toPlayer != -1? toPlayer : "to-player-not-found") +
                 "cardToShow=" + (cardToShow != -1? cardToShow : "card-to-show-not-found");
     }
+
+    public int getCardToShow() {
+        return cardToShow;
+    }
 }

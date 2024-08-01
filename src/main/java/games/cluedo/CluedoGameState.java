@@ -119,7 +119,7 @@ public class CluedoGameState extends AbstractGameState {
                     PartialObservableDeck<CluedoCard> playerHand = playerHandCards.get(i);
                     for (int j=0; j<playerHand.getSize(); j++) {
                         if (!playerHand.getVisibilityForPlayer(j, playerId)) {
-                            playerHand.setComponent(j, unknownCards.draw());
+                            copy.playerHandCards.get(i).setComponent(j, unknownCards.draw());
                         }
                     }
                 }
@@ -184,4 +184,13 @@ public class CluedoGameState extends AbstractGameState {
         return allCards;
     }
 
+    public GraphBoard getGameBoard() { return gameBoard; }
+
+    public List<String> getCharacterLocations() { return characterLocations; }
+
+    public int getCurrentTurnPlayerId() { return currentTurnPlayerId; }
+
+    public Queue<Integer> getTurnOrderQueue() {
+        return turnOrderQueue;
+    }
 }
