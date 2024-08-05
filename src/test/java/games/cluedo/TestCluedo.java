@@ -2,12 +2,19 @@ package games.cluedo;
 
 import core.AbstractParameters;
 import core.AbstractPlayer;
+import core.CoreConstants;
 import core.Game;
 import core.actions.AbstractAction;
+import core.actions.DoNothing;
 import core.components.BoardNode;
 import games.GameType;
 import games.cluedo.actions.ChooseCharacter;
 import games.cluedo.actions.GuessPartOfCaseFile;
+import games.cluedo.actions.ShowHintCard;
+import games.cluedo.cards.CharacterCard;
+import games.cluedo.cards.CluedoCard;
+import games.cluedo.cards.RoomCard;
+import games.cluedo.cards.WeaponCard;
 import org.junit.Before;
 import org.junit.Test;
 import players.simple.RandomPlayer;
@@ -15,6 +22,7 @@ import players.simple.RandomPlayer;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
 public class TestCluedo {
@@ -28,10 +36,10 @@ public class TestCluedo {
         // Feel free to change how many characters this game is set up with
         // The tests should all work with different numbers of players
         players = List.of(
-//                new RandomPlayer(),
-//                new RandomPlayer(),
-//                new RandomPlayer(),
-//                new RandomPlayer(),
+                new RandomPlayer(),
+                new RandomPlayer(),
+                new RandomPlayer(),
+                new RandomPlayer(),
                 new RandomPlayer(),
                 new RandomPlayer()
         );
@@ -39,6 +47,8 @@ public class TestCluedo {
         cluedo = GameType.Cluedo.createGameInstance(players.size(),100, gameParameters);
         cluedo.reset(players);
     }
+
+    // ========== setup ==========
 
     @Test
     public void testSetupCaseFile() {
@@ -103,56 +113,101 @@ public class TestCluedo {
         assertEquals(CluedoGameState.CluedoGamePhase.chooseCharacter, cgs.getGamePhase());
     }
 
-    @Test
-    public void testChoosingCharacters() {
-        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+    // ========== computeAvailableActions ==========
 
-        // Assert the first player to choose a character can choose any character
+    @Test
+    public void testComputeAvailableActionsChooseCharactersPhase() {
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+        // Assert the first player can choose any character
         List<AbstractAction> actions0 = cfm.computeAvailableActions(cgs);
         assertEquals(List.of(0,1,2,3,4,5), computeAvailableCharacterIndexes(actions0));
 
-        // Suppose the first player chooses REV_GREEN
-        cfm.next(cgs, cfm.computeAvailableActions(cgs).get(3));
+        // Populate characterToPlayerMap as if some players have chosen their character
+        for (int i=0;i< cgs.getNPlayers()-1; i++) {
+            cgs.characterToPlayerMap.put(i,i);
+        }
 
-        // Assert we have moved to the second player
-        assertEquals(1, cgs.getCurrentPlayer());
-        // Assert the second player can choose from any character except REV_GREEN
+        // Assert the next player can choose any character not previously chosen
         List<AbstractAction> actions1 = cfm.computeAvailableActions(cgs);
-        assertEquals(List.of(0,1,2,4,5), computeAvailableCharacterIndexes(actions1));
+        List<Integer> expectedList = new ArrayList<>();
+        for (int i=cgs.getNPlayers()-1; i<6; i++) {
+            expectedList.add(i);
+        }
+        assertEquals(expectedList, computeAvailableCharacterIndexes(actions1));
+    }
 
-        // Suppose the second player chooses COL_MUSTARD
-        cfm.next(cgs, cfm.computeAvailableActions(cgs).get(1));
+    @Test
+    public void testComputeAvailableActionsMakeGuessPhase() { // either makeSuggestion or makeAccusation
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
 
-        if (players.size() != 2) {
-            // Assert we have moved to the third player
-            assertEquals(2, cgs.getTurnOwner());
-            // Assert the third player can choose from any character except REV_GREEN and COL_MUSTARD
+        for (CluedoGameState.CluedoGamePhase phase : new CluedoGameState.CluedoGamePhase[]{
+                CluedoGameState.CluedoGamePhase.makeSuggestion, CluedoGameState.CluedoGamePhase.makeAccusation }) {
+
+            cgs.setGamePhase(phase);
+            cgs.currentGuess.clear();
+
+            // Assert player can first choose any room
+            List<AbstractAction> actions0 = cfm.computeAvailableActions(cgs);
+            for (CluedoConstants.Room room : CluedoConstants.Room.values()) {
+                assert(computeAvailableGuessNames(actions0).contains(room.name()));
+            }
+            // Populate the caseFile as if the player chose a room
+            cgs.currentGuess.add(new RoomCard(CluedoConstants.Room.LOUNGE));
+
+            // Assert player can next choose any character
+            List<AbstractAction> actions1 = cfm.computeAvailableActions(cgs);
+            for (CluedoConstants.Character character : CluedoConstants.Character.values()) {
+                assert(computeAvailableGuessNames(actions1).contains(character.name()));
+            }
+            // Populate the caseFile as if the player chose a character
+            cgs.currentGuess.add(new CharacterCard(CluedoConstants.Character.DR_ORCHID));
+
+            // Assert player can next choose any weapon
             List<AbstractAction> actions2 = cfm.computeAvailableActions(cgs);
-            assertEquals(List.of(0,2,4,5), computeAvailableCharacterIndexes(actions2));
-        }
-
-        // Suppose the third, fourth, etc. players have chosen MISS_SCARLETT, DR_ORCHID, MRS_PEACOCK, PROF_PLUM
-        while (cgs.characterToPlayerMap.size() < cgs.getNPlayers()) {
-            cfm.next(cgs, cfm.computeAvailableActions(cgs).get(0));
-        }
-
-        // Assert we have moved to the next phase of the game
-        assertEquals(CluedoGameState.CluedoGamePhase.makeSuggestion, cgs.getGamePhase());
-        // Assert characterToPlayerMap is correctly filled
-        HashMap<Integer, Integer> expectedCharacterToPlayerMap = new HashMap<>() {{
-            put(0,2); put(1,1); put(2,3); put(3,0); put(4,4); put(5,5);
-        }};
-        for (int i=0; i<6; i++) {
-            if (cgs.characterToPlayerMap.containsKey(i)) {
-                assertEquals(expectedCharacterToPlayerMap.get(i), cgs.characterToPlayerMap.get(i));
+            for (CluedoConstants.Weapon weapon : CluedoConstants.Weapon.values()) {
+                assert(computeAvailableGuessNames(actions2).contains(weapon.name()));
             }
         }
+    }
 
-        // Assert the next player to have a turn is the one playing the character with the lowest index
-        int expectedFirstPlayer;
-        if (players.size() == 2) { expectedFirstPlayer = 1; }
-        else { expectedFirstPlayer = 2; }
-        assertEquals(expectedFirstPlayer, cgs.getCurrentPlayer());
+    @Test
+    public void testComputeAvailableActionsRevealCardsPhase() {
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+
+        cgs.setGamePhase(CluedoGameState.CluedoGamePhase.revealCards);
+        cgs.currentTurnPlayerId = 1;
+
+        // Populate the currentGuess as if player 1 had made a suggestion
+        cgs.currentGuess.add(cgs.allCards.get(0));
+        cgs.currentGuess.add(cgs.allCards.get(1));
+        cgs.currentGuess.add(cgs.allCards.get(2));
+
+        cgs.playerHandCards.get(0).clear();
+
+        // Assert player 0 cannot show any cards to player 1
+        List<AbstractAction> actions0 = cfm.computeAvailableActions(cgs);
+        assert(actions0.size() == 1);
+        assert(actions0.get(0) instanceof DoNothing);
+
+        for (int i=0; i<3; i++) {
+            // Suppose player 0 had i+1 cards in their hand that were in the currentGuess
+            cgs.playerHandCards.get(0).add(cgs.allCards.get(i));
+            // Assert player 0 has i+1 options for which card to show player 1
+            List<AbstractAction> actions1 = cfm.computeAvailableActions(cgs);
+            assert(actions1.size() == i+1);
+        }
+    }
+
+    @Test
+    public void testComputeAvailableActionsMakeAccusationPhase() {
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+
+        cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeAccusation);
+
+        // Assert player has the option to not make an accusation
+        List<AbstractAction> actions0 = cfm.computeAvailableActions(cgs);
+        assert(actions0.get(actions0.size()-1) instanceof DoNothing);
+
     }
 
     private List<Integer> computeAvailableCharacterIndexes(List<AbstractAction> actions) {
@@ -163,78 +218,169 @@ public class TestCluedo {
         return availableCharacterIndexes;
     }
 
-    @Test
-    public void testMakingSuggestion() {
-        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
-
-        List<Integer> playerToCharacter = List.of(3,1,0,2,4,5);
-        for (int i = 0; i < players.size(); i++) {
-            cgs.characterToPlayerMap.put(playerToCharacter.get(i), i);
-        }
-        cfm.setPlayerOrder(cgs, cgs.characterToPlayerMap);
-        cfm.endRound(cgs, cfm.nextPlayer(cgs));
-        cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
-
-        // ^^^^^ SETUP ^^^^^
-
-        // Assert player can choose any room
-        List<AbstractAction> actions0 = cfm.computeAvailableActions(cgs);
-        for (CluedoConstants.Room room : CluedoConstants.Room.values()) {
-            assert(computeAvailableGuessNames(actions0).contains(room.name()));
-        }
-
-        // Suppose the player chose the LOUNGE
-        cfm.next(cgs, cfm.computeAvailableActions(cgs).get(2));
-
-        // Assert player can choose any character
-        List<AbstractAction> actions1 = cfm.computeAvailableActions(cgs);
-        for (CluedoConstants.Character character : CluedoConstants.Character.values()) {
-            assert(computeAvailableGuessNames(actions1).contains(character.name()));
-        }
-        // Suppose the character adds DR_ORCHID and CANDLESTICK
-        cfm.next(cgs, cfm.computeAvailableActions(cgs).get(2));
-        cfm.next(cgs, cfm.computeAvailableActions(cgs).get(4));
-
-        // Assert we have moved onto the next phase of the game
-        assertEquals(CluedoGameState.CluedoGamePhase.revealCards, cgs.getGamePhase());
-
-        // Assert currentGuess contains the expected 3 cards
-        assertEquals(3, cgs.currentGuess.getSize());
-        assertEquals(CluedoConstants.Weapon.CANDLESTICK.name(), cgs.currentGuess.get(0).toString());
-        assertEquals(CluedoConstants.Character.DR_ORCHID.name(), cgs.currentGuess.get(1).toString());
-        assertEquals(CluedoConstants.Room.LOUNGE.name(), cgs.currentGuess.get(2).toString());
-
-        // Assert the next player to have a turn is the one playing the character with the second-lowest index
-        int expectedNextPlayer;
-        if (players.size() == 2) { expectedNextPlayer = 0; }
-        else { expectedNextPlayer = 1; }
-        assertEquals(expectedNextPlayer, cgs.getTurnOwner());
-    }
-
     private List<String> computeAvailableGuessNames(List<AbstractAction> actions) {
         List<String> availableGuessNames = new ArrayList<>();
         for (AbstractAction availableAction : actions) {
-            availableGuessNames.add(((GuessPartOfCaseFile) availableAction).getGuessName());
+            if (!(availableAction instanceof DoNothing)) {
+                availableGuessNames.add(((GuessPartOfCaseFile) availableAction).getGuessName());
+            }
         }
         return availableGuessNames;
     }
 
+    // ========== afterAction ==========
+
     @Test
-    public void testRevealingCards() {
+    public void testAfterActionChooseCharactersPhase() {
         CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
-        // TODO more unit tests
+
+        for (int i=0; i<cgs.getNPlayers()-1; i++) {
+            cfm.next(cgs, new ChooseCharacter(i, 5-i));
+            // Assert we have moved to the next player
+            assertEquals(i+1, cgs.getCurrentPlayer());
+        }
+
+        cfm.next(cgs, new ChooseCharacter(cgs.getNPlayers()-1, 6-cgs.getNPlayers()));
+        // After the final player has chosen a character, assert that the gamePhase has changed, and turn order is now by character index
+        assertEquals(CluedoGameState.CluedoGamePhase.makeSuggestion, cgs.getGamePhase());
+
+        Queue<Integer> expectedTurnOrder = new LinkedList<>();
+        for (int i=1; i<cgs.getNPlayers(); i++) {
+            expectedTurnOrder.add(cgs.getNPlayers()-i-1);
+        }
+        expectedTurnOrder.add(cgs.getNPlayers()-1);
+        assertEquals(expectedTurnOrder, cgs.getTurnOrderQueue());
+        assertEquals(cgs.getNPlayers()-1, cgs.getCurrentPlayer());
     }
 
     @Test
-    public void testMakingAssertion() {
+    public void testAfterActionMakingSuggestionPhase() {
         CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
 
+        for (int i=0; i<cgs.getNPlayers(); i++) {
+            cgs.characterToPlayerMap.put(i,i);
+        }
+        cfm.setPlayerOrder(cgs, cgs.characterToPlayerMap);
+        cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
+
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Room.KITCHEN));
+        // Assert player 0 has moved to the kitchen
+        assertEquals("KITCHEN", cgs.characterLocations.get(0));
+
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Character.DR_ORCHID));
+        // Assert Dr Orchid has moved to the kitchen as well
+        assertEquals("KITCHEN", cgs.characterLocations.get(2));
+
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Weapon.ROPE));
+        // After the final suggestion has been made, assert that the gamePhase has changed and all players have been added to reactivePlayers
+        assertEquals(CluedoGameState.CluedoGamePhase.revealCards, cgs.getGamePhase());
+
+        Queue<Integer> expectedReactivePlayers = new LinkedList<>();
+        for (int i=1; i<cgs.getNPlayers(); i++) {
+            expectedReactivePlayers.add(i);
+        }
+        assertEquals(expectedReactivePlayers, cgs.reactivePlayers);
     }
 
     @Test
-    public void testGameEnd() {
+    public void testAfterActionRevealingCardsPhase() {
         CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
 
+        cgs.setGamePhase(CluedoGameState.CluedoGamePhase.revealCards);
+        // Suppose player 1 is making a suggestion currently
+        cgs.currentTurnPlayerId = 1;
+        cfm.next(cgs, new DoNothing());
+        // If the player cannot show a card, assert the current player moves to the next player
+        assertEquals(1, cgs.getCurrentPlayer());
+
+        // Suppose player 0 is making a suggestion currently
+        cgs.currentTurnPlayerId = 0;
+        cfm.next(cgs, new ShowHintCard(1,0, 0));
+        // If the player can show a card, assert the game phase has changed, the current player moves back to the player that made the suggestion and currentGuess is empty
+        assertEquals(CluedoGameState.CluedoGamePhase.makeAccusation, cgs.getGamePhase());
+        assertEquals(0, cgs.getCurrentPlayer());
+        assertEquals(0, cgs.currentGuess.getSize());
+    }
+
+    @Test
+    public void testAfterActionMakingAccusationPhaseCorrectGuess() {
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+
+        cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeAccusation);
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Room.valueOf(cgs.caseFile.get(2).getComponentName())));
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Character.valueOf(cgs.caseFile.get(1).getComponentName())));
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Weapon.valueOf(cgs.caseFile.get(0).getComponentName())));
+
+        // Assert the game ends and the current player wins
+        assertEquals(CoreConstants.GameResult.GAME_END, cgs.getGameStatus());
+        assertEquals(CoreConstants.GameResult.WIN_GAME, cgs.getPlayerResults()[0]);
+        for (int i=1; i<cgs.getNPlayers(); i++) {
+            assertEquals(CoreConstants.GameResult.LOSE_GAME, cgs.getPlayerResults()[i]);
+        }
+    }
+
+    @Test
+    public void testAfterActionMakingAccusationPhaseIncorrectGuess() {
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+
+        cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeAccusation);
+        // Assumes the seed doesn't set the case file to be DR_ORCHID, ROPE, KITCHEN (0.3% chance)
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Room.KITCHEN));
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Character.DR_ORCHID));
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Weapon.ROPE));
+
+        // Assert the current player is set to be no longer alive and the game continues
+        assertEquals(false, cgs.playerAliveStatus.get(0));
+        assertEquals(CluedoGameState.CluedoGamePhase.makeSuggestion, cgs.getGamePhase());
+        assertEquals(1, cgs.getCurrentPlayer());
+    }
+
+    @Test
+    public void testAfterActionMakingAccusationPhaseAllIncorrectGuesses() {
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+
+        cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeAccusation);
+        // Assume all other players have made incorrect guesses
+        for (int i=1; i<cgs.getNPlayers(); i++) {
+            cgs.playerAliveStatus.set(i, false);
+        }
+        // Assumes the seed doesn't set the case file to be DR_ORCHID, ROPE, KITCHEN (0.3% chance)
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Room.KITCHEN));
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Character.DR_ORCHID));
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Weapon.ROPE));
+
+        // Assert the game ends and everyone loses
+        assertEquals(CoreConstants.GameResult.GAME_END, cgs.getGameStatus());
+        for (int i=0; i<cgs.getNPlayers(); i++) {
+            assertEquals(CoreConstants.GameResult.LOSE_GAME, cgs.getPlayerResults()[i]);
+        }
+    }
+
+    // ========== Other Tests ==========
+
+    @Test
+    public void testGetNextPlayerWithReactivePlayers() {
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+
+        cgs.turnOrderQueue.clear();
+        cgs.turnOrderQueue.addAll(List.of(2, 1, 3, 0));
+        cgs.reactivePlayers.addAll(List.of(3,0));
+
+        assertEquals(3, cfm.nextPlayer(cgs));
+    }
+
+    @Test
+    public void testGetNextPlayerWithoutReactivePlayers() {
+        CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+
+        cgs.turnOrderQueue.clear();
+        cgs.turnOrderQueue.addAll(List.of(2, 1, 3, 0));
+
+        assertEquals(2, cfm.nextPlayer(cgs));
+
+        Queue<Integer> expectedTurnOrderQueue = new LinkedList<>();
+        expectedTurnOrderQueue.addAll(List.of(1,3,0,2));
+        assertEquals(expectedTurnOrderQueue, cgs.turnOrderQueue);
     }
 
 }

@@ -130,11 +130,13 @@ public class CluedoGameState extends AbstractGameState {
     }
 
     @Override
-    protected double _getHeuristicScore(int playerId) {
+    protected double _getHeuristicScore(int playerId) { // TODO create a variety of heuristics
         int score = 0;
-        for (int i = 0; i<allCards.getSize(); i++) {
-            boolean visible = allCards.getVisibilityForPlayer(i, playerId);
-            if (visible) score ++;
+        for (int i = 0; i < nPlayers; i++) {
+            for (int j = 0; j < playerHandCards.get(i).getSize(); j++) {
+                boolean visible = playerHandCards.get(i).getVisibilityForPlayer(j, playerId);
+                if (visible) score++;
+            }
         }
         return score;
     }

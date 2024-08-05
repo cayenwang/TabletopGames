@@ -285,7 +285,10 @@ public class CluedoForwardModel extends StandardForwardModel {
 
     private boolean guessMatchesCaseFile(AbstractGameState gameState) {
         CluedoGameState cgs = (CluedoGameState) gameState;
-        return cgs.currentGuess.equals(cgs.caseFile);
+        for (int i=0; i<3; i++) {
+            if (!(cgs.currentGuess.get(i).equals(cgs.caseFile.get(i)))) return false;
+        }
+        return true;
     }
 
     protected int nextPlayer(AbstractGameState gameState) {
