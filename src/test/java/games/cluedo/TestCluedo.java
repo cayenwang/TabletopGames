@@ -11,10 +11,6 @@ import games.GameType;
 import games.cluedo.actions.ChooseCharacter;
 import games.cluedo.actions.GuessPartOfCaseFile;
 import games.cluedo.actions.ShowHintCard;
-import games.cluedo.cards.CharacterCard;
-import games.cluedo.cards.CluedoCard;
-import games.cluedo.cards.RoomCard;
-import games.cluedo.cards.WeaponCard;
 import org.junit.Before;
 import org.junit.Test;
 import players.simple.RandomPlayer;
@@ -22,7 +18,6 @@ import players.simple.RandomPlayer;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
 public class TestCluedo {
@@ -152,7 +147,7 @@ public class TestCluedo {
                 assert(computeAvailableGuessNames(actions0).contains(room.name()));
             }
             // Populate the caseFile as if the player chose a room
-            cgs.currentGuess.add(new RoomCard(CluedoConstants.Room.LOUNGE));
+            cgs.currentGuess.add(new CluedoCard(CluedoConstants.Room.LOUNGE));
 
             // Assert player can next choose any character
             List<AbstractAction> actions1 = cfm.computeAvailableActions(cgs);
@@ -160,7 +155,7 @@ public class TestCluedo {
                 assert(computeAvailableGuessNames(actions1).contains(character.name()));
             }
             // Populate the caseFile as if the player chose a character
-            cgs.currentGuess.add(new CharacterCard(CluedoConstants.Character.DR_ORCHID));
+            cgs.currentGuess.add(new CluedoCard(CluedoConstants.Character.DR_ORCHID));
 
             // Assert player can next choose any weapon
             List<AbstractAction> actions2 = cfm.computeAvailableActions(cgs);
@@ -320,7 +315,7 @@ public class TestCluedo {
     }
 
     @Test
-    public void testAfterActionMakingAccusationPhaseIncorrectGuess() {
+    public void testAfterActionMakingAccusationPhaseOneIncorrectGuess() {
         CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
 
         cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeAccusation);
@@ -378,8 +373,7 @@ public class TestCluedo {
 
         assertEquals(2, cfm.nextPlayer(cgs));
 
-        Queue<Integer> expectedTurnOrderQueue = new LinkedList<>();
-        expectedTurnOrderQueue.addAll(List.of(1,3,0,2));
+        Queue<Integer> expectedTurnOrderQueue = new LinkedList<>(List.of(1, 3, 0, 2));
         assertEquals(expectedTurnOrderQueue, cgs.turnOrderQueue);
     }
 

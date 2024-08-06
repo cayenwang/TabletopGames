@@ -4,7 +4,7 @@ import core.AbstractGameState;
 import core.actions.AbstractAction;
 import core.components.PartialObservableDeck;
 import games.cluedo.CluedoGameState;
-import games.cluedo.cards.CluedoCard;
+import games.cluedo.CluedoCard;
 
 import java.util.Objects;
 
@@ -14,10 +14,10 @@ public class ShowHintCard extends AbstractAction {
     int toPlayer = -1;
     int cardToShow = -1;
 
-    public ShowHintCard(int currentPlayerId, int recipientPlayerId, int cardIndex) {
-        fromPlayer = currentPlayerId;
-        toPlayer = recipientPlayerId;
-        cardToShow = cardIndex;
+    public ShowHintCard(int fromPlayer, int toPlayer, int cardToShow) {
+        this.fromPlayer = fromPlayer;
+        this.toPlayer = toPlayer;
+        this.cardToShow = cardToShow;
     }
 
     @Override

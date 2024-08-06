@@ -6,7 +6,6 @@ import core.CoreConstants;
 import core.components.*;
 import core.interfaces.IGamePhase;
 import games.GameType;
-import games.cluedo.cards.CluedoCard;
 
 import java.util.*;
 
@@ -93,7 +92,7 @@ public class CluedoGameState extends AbstractGameState {
         if (playerId != -1) {
             // Add all cards that are not visible to the current player into a deck
             Deck<CluedoCard> unknownCards = new Deck<>("Unknown Cards", CoreConstants.VisibilityMode.HIDDEN_TO_ALL);
-            for (int i = 0; i < getNPlayers(); i++) {
+            for (int i = 0; i < nPlayers; i++) {
                 if (i != playerId) {
                     PartialObservableDeck<CluedoCard> playerHand = playerHandCards.get(i);
                     for (int j=0; j<playerHand.getSize(); j++) {
@@ -114,7 +113,7 @@ public class CluedoGameState extends AbstractGameState {
             copy.caseFile.add(unknownCards.draw());
             copy.caseFile.add(unknownCards.draw());
 
-            for (int i = 0; i < getNPlayers(); i++) {
+            for (int i = 0; i < nPlayers; i++) {
                 if (i != playerId) {
                     PartialObservableDeck<CluedoCard> playerHand = playerHandCards.get(i);
                     for (int j=0; j<playerHand.getSize(); j++) {

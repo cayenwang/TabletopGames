@@ -8,16 +8,9 @@ import core.actions.DoNothing;
 import core.components.BoardNode;
 import core.components.GraphBoard;
 import core.components.PartialObservableDeck;
-import core.properties.PropertyString;
-import core.properties.PropertyVector2D;
 import games.cluedo.actions.ChooseCharacter;
 import games.cluedo.actions.GuessPartOfCaseFile;
 import games.cluedo.actions.ShowHintCard;
-import games.cluedo.cards.CharacterCard;
-import games.cluedo.cards.CluedoCard;
-import games.cluedo.cards.RoomCard;
-import games.cluedo.cards.WeaponCard;
-import utilities.Vector2D;
 
 import java.util.*;
 
@@ -28,7 +21,7 @@ public class CluedoForwardModel extends StandardForwardModel {
         CluedoGameState cgs = (CluedoGameState) firstState;
 
         cgs.gameBoard = new GraphBoard("Game Board");
-        cgs.characterToPlayerMap = new HashMap<>();
+        cgs.characterToPlayerMap = new HashMap<>(); // Is empty initially and is populated when players choose which character to play
         cgs.characterLocations = new ArrayList<>();
         cgs.playerAliveStatus = new ArrayList<>(Collections.nCopies(cgs.getNPlayers(), Boolean.TRUE));
         cgs.playerHandCards = new ArrayList<>();
@@ -55,7 +48,7 @@ public class CluedoForwardModel extends StandardForwardModel {
         // All characters start in the startNode node
         // Replaces the fact that in the original game, characters start in given positions in the corridor
         // Including a startNode ensures characters don't start in a room
-        for (CluedoConstants.Character character : CluedoConstants.Character.values()) {
+        for (CluedoConstants.Character c : CluedoConstants.Character.values()) {
             cgs.characterLocations.add(startNode.getComponentName());
         }
 
@@ -64,9 +57,9 @@ public class CluedoForwardModel extends StandardForwardModel {
         CluedoConstants.Weapon randomWeapon = CluedoConstants.Weapon.values()[cgs.getRnd().nextInt(CluedoConstants.Weapon.values().length)];
         CluedoConstants.Room randomRoom = CluedoConstants.Room.values()[cgs.getRnd().nextInt(CluedoConstants.Room.values().length)];
 
-        CluedoCard randomCharacterCard = new CharacterCard(randomCharacter);
-        CluedoCard randomWeaponCard = new WeaponCard(randomWeapon);
-        CluedoCard randomRoomCard = new RoomCard(randomRoom);
+        CluedoCard randomCharacterCard = new CluedoCard(randomCharacter);
+        CluedoCard randomWeaponCard = new CluedoCard(randomWeapon);
+        CluedoCard randomRoomCard = new CluedoCard(randomRoom);
 
         cgs.caseFile.add(randomRoomCard, new boolean[cgs.getNPlayers()]);
         cgs.caseFile.add(randomCharacterCard, new boolean[cgs.getNPlayers()]);
@@ -76,17 +69,17 @@ public class CluedoForwardModel extends StandardForwardModel {
         cgs.allCards = new PartialObservableDeck<>("All Cards", -1, new boolean[cgs.getNPlayers()]);
         for (CluedoConstants.Character character : CluedoConstants.Character.values()) {
             if (!character.equals(randomCharacter)) {
-                cgs.allCards.add(new CharacterCard(character));
+                cgs.allCards.add(new CluedoCard(character));
             }
         }
         for (CluedoConstants.Weapon weapon : CluedoConstants.Weapon.values()) {
             if (!weapon.equals(randomWeapon)) {
-                cgs.allCards.add(new WeaponCard(weapon));
+                cgs.allCards.add(new CluedoCard(weapon));
             }
         }
         for (CluedoConstants.Room room : CluedoConstants.Room.values()) {
             if (!room.equals(randomRoom)) {
-                cgs.allCards.add(new RoomCard(room));
+                cgs.allCards.add(new CluedoCard(room));
             }
         }
 

@@ -4,7 +4,7 @@ import core.AbstractGameState;
 import core.actions.AbstractAction;
 import games.cluedo.CluedoConstants;
 import games.cluedo.CluedoGameState;
-import games.cluedo.cards.CluedoCard;
+import games.cluedo.CluedoCard;
 
 import java.util.Objects;
 
@@ -13,22 +13,22 @@ public class GuessPartOfCaseFile extends AbstractAction  {
     String guessName;
 
     public GuessPartOfCaseFile(AbstractGameState gameState, CluedoConstants.Character guess) {
-        guessPartOfCaseFile(gameState, guess);
+        _guessPartOfCaseFile(gameState, guess);
     }
 
     public GuessPartOfCaseFile(AbstractGameState gameState, CluedoConstants.Weapon guess) {
-        guessPartOfCaseFile(gameState, guess);
+        _guessPartOfCaseFile(gameState, guess);
     }
 
     public GuessPartOfCaseFile(AbstractGameState gameState, CluedoConstants.Room guess) {
-        guessPartOfCaseFile(gameState, guess);
+        _guessPartOfCaseFile(gameState, guess);
     }
 
-    private void guessPartOfCaseFile(AbstractGameState gameState, Object guess) {
+    private void _guessPartOfCaseFile(AbstractGameState gameState, Object guess) {
         CluedoGameState cgs = (CluedoGameState) gameState;
         guessName = guess.toString();
         for (CluedoCard card : cgs.getAllCards()) {
-            if (Objects.equals(card.getComponentName(), guess.toString())) {
+            if (Objects.equals(card.getComponentName(), guessName)) {
                 guessCard = card;
                 break;
             }

@@ -1,17 +1,12 @@
 package games.cluedo.gui;
 
 import core.AbstractGameState;
-import core.components.Component;
-import core.components.Deck;
 import core.components.PartialObservableDeck;
 import games.cluedo.CluedoGameState;
-import games.cluedo.cards.CluedoCard;
+import games.cluedo.CluedoCard;
 import gui.views.CardView;
-import gui.views.ComponentView;
 import gui.views.DeckView;
 import utilities.ImageIO;
-
-import java.util.HashMap;
 
 import java.awt.*;
 

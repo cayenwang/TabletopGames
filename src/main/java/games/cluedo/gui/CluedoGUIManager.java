@@ -6,14 +6,12 @@ import core.CoreConstants;
 import core.Game;
 import core.actions.AbstractAction;
 import core.actions.DoNothing;
-import core.components.PartialObservableDeck;
 import games.cluedo.CluedoConstants;
 import games.cluedo.CluedoGameState;
 import games.cluedo.CluedoParameters;
 import games.cluedo.actions.ChooseCharacter;
 import games.cluedo.actions.GuessPartOfCaseFile;
 import games.cluedo.actions.ShowHintCard;
-import games.cluedo.cards.CluedoCard;
 import gui.AbstractGUIManager;
 import gui.GamePanel;
 import gui.IScreenHighlight;
@@ -65,8 +63,8 @@ public class CluedoGUIManager extends AbstractGUIManager {
                 playerTurnOrderLabel = new JLabel[nPlayers];
                 JPanel mainGameArea = new JPanel(new BorderLayout());
                 JPanel topGameArea = new JPanel(new BorderLayout());
-                JPanel bottomGameArea = new JPanel(new FlowLayout());
                 JPanel middleGameArea = new JPanel(new FlowLayout());
+                JPanel bottomGameArea = new JPanel(new FlowLayout());
                 JPanel turnOrderPanel = new JPanel(new FlowLayout());
                 JPanel cardsPanel1 = new JPanel(new FlowLayout());
                 JPanel cardsPanel2 = new JPanel(new FlowLayout());
@@ -175,7 +173,7 @@ public class CluedoGUIManager extends AbstractGUIManager {
 
     @Override
     public int getMaxActionSpace() {
-        return 10;
+        return Math.max(Math.max(CluedoConstants.Room.values().length, CluedoConstants.Character.values().length), CluedoConstants.Weapon.values().length) + 1;
     }
 
     @Override

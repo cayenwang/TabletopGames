@@ -1,4 +1,4 @@
-package games.cluedo.cards;
+package games.cluedo;
 
 import core.components.Card;
 
@@ -6,12 +6,21 @@ public class CluedoCard extends Card {
 
     public Object cardName;
 
-    protected CluedoCard(Object cardName) {
+    public CluedoCard(CluedoConstants.Character cardName) {
         super(cardName.toString());
         this.cardName = cardName;
     }
 
-    protected CluedoCard(Object cardType, int ID) {
+    public CluedoCard(CluedoConstants.Weapon cardName) {
+        super(cardName.toString());
+        this.cardName = cardName;
+    }
+    public CluedoCard(CluedoConstants.Room cardName) {
+        super(cardName.toString());
+        this.cardName = cardName;
+    }
+
+    private CluedoCard(Object cardType, int ID) {
         super(cardType.toString(), ID);
         this.cardName = cardType;
     }

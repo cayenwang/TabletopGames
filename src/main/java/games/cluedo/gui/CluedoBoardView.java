@@ -10,14 +10,9 @@ import gui.views.ComponentView;
 import utilities.ImageIO;
 import utilities.Vector2D;
 
-import javax.swing.*;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
-
-import static core.CoreConstants.coordinateHash;
-import static core.CoreConstants.nameHash;
-import static games.pandemic.PandemicConstants.edgeHash;
 
 public class CluedoBoardView extends ComponentView {
     GraphBoard graphBoard;
@@ -73,7 +68,7 @@ public class CluedoBoardView extends ComponentView {
             g.setFont(new Font("Inter", Font.PLAIN, 10));
             g.drawString(b.getComponentName(), pos.getX(), pos.getY() - nodeSize/2 - playerPawnSize);
 
-            // Draw characters
+            // Draw characters over the nodes
             List<Integer> characters = new ArrayList<>();
             for (int i=0; i<6; i++) {
                 if (Objects.equals(cgs.getCharacterLocations().get(i), b.getComponentName())) {
@@ -91,7 +86,6 @@ public class CluedoBoardView extends ComponentView {
                 g.setColor(Color.black);
                 g.drawOval(x, y, playerPawnSize, playerPawnSize);
             }
-
 
         }
 
