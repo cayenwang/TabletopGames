@@ -229,10 +229,6 @@ public class CluedoGUIManager extends AbstractGUIManager {
     protected void _update(AbstractPlayer player, AbstractGameState gameState) {
         CluedoGameState cgs = (CluedoGameState) gameState;
         if (gameState != null) {
-            for (int i=0; i<cgs.getNPlayers(); i++) {
-                // Update all playerHands (notably the visibilities)
-                playerHands[i].updateComponent(cgs.getPlayerHandCards().get(i));
-            }
             // Update the board
             board.updateComponent(cgs.getGameBoard());
 

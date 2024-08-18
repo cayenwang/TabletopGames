@@ -15,6 +15,7 @@ public class CluedoGameState extends AbstractGameState {
 
     // Map of playerId to character index
     // Character index is defined by 0:Scarlett, 1:Mustard, 2:Orchid etc. in turn order
+    // This is useful iff the full board is implemented (different characters start near different rooms) and players want to tactically choose the character that starts nearer a specific room
     public HashMap<Integer, Integer> characterToPlayerMap = new HashMap<>();
     // Room names where each character is at, index corresponds to character index as defined above
     List<String> characterLocations;
@@ -34,7 +35,7 @@ public class CluedoGameState extends AbstractGameState {
 
     Queue<Integer> turnOrderQueue;
     Queue<Integer> reactivePlayers;
-    // ID of player whose turn it is (ie the player who made the suggestion)
+    // ID of player who owns the current turn (ie the player who made the most recent suggestion)
     int currentTurnPlayerId;
 
     /**
@@ -102,42 +103,69 @@ public class CluedoGameState extends AbstractGameState {
                     }
                 }
             }
-            unknownCards.add(caseFile);
 
-            // Shuffle deck
-            unknownCards.shuffle(redeterminisationRnd);
+            // If there are unknown cards in the players' hands, shuffle all the unknown cards around
+            // If there aren't unknown cards in the players' hands, then we know what the caseFile is
+            if (unknownCards.getSize() != 0) {
+                unknownCards.add(caseFile);
 
-            // Redistribute shuffled cards
-            copy.caseFile.clear();
-            copy.caseFile.add(unknownCards.draw());
-            copy.caseFile.add(unknownCards.draw());
-            copy.caseFile.add(unknownCards.draw());
+                // Shuffle deck
+                unknownCards.shuffle(redeterminisationRnd);
 
-            for (int i = 0; i < nPlayers; i++) {
-                if (i != playerId) {
-                    PartialObservableDeck<CluedoCard> playerHand = playerHandCards.get(i);
-                    for (int j=0; j<playerHand.getSize(); j++) {
-                        if (!playerHand.getVisibilityForPlayer(j, playerId)) {
-                            copy.playerHandCards.get(i).setComponent(j, unknownCards.draw());
+                // Redistribute shuffled cards
+                copy.caseFile.clear();
+                copy.caseFile.add(unknownCards.draw());
+                copy.caseFile.add(unknownCards.draw());
+                copy.caseFile.add(unknownCards.draw());
+
+                for (int i = 0; i < nPlayers; i++) {
+                    if (i != playerId) {
+                        PartialObservableDeck<CluedoCard> playerHand = playerHandCards.get(i);
+                        for (int j=0; j<playerHand.getSize(); j++) {
+                            if (!playerHand.getVisibilityForPlayer(j, playerId)) {
+                                copy.playerHandCards.get(i).setComponent(j, unknownCards.draw());
+                            }
                         }
                     }
                 }
             }
         }
-
         return copy;
     }
 
     @Override
-    protected double _getHeuristicScore(int playerId) { // TODO create a variety of heuristics
-        int score = 0;
+    protected double _getHeuristicScore(int playerId) {
+        if (!playerAliveStatus.get(playerId)) return -1;
+        if (getPlayerResults()[playerId] == CoreConstants.GameResult.WIN_GAME) return 1;
+
+        // Determine how many possible caseFiles match the cards already seen
+        int hiddenCharactersCount = 1;
+        int hiddenWeaponsCount = 1;
+        int hiddenRoomsCount = 1;
         for (int i = 0; i < nPlayers; i++) {
             for (int j = 0; j < playerHandCards.get(i).getSize(); j++) {
                 boolean visible = playerHandCards.get(i).getVisibilityForPlayer(j, playerId);
-                if (visible) score++;
+                if (!visible) {
+                    try {
+                        CluedoConstants.Character.valueOf(playerHandCards.get(i).getComponentName());
+                        hiddenCharactersCount++;
+                    } catch (IllegalArgumentException ignored) {}
+                    try {
+                        CluedoConstants.Weapon.valueOf(playerHandCards.get(i).getComponentName());
+                        hiddenWeaponsCount++;
+                    } catch (IllegalArgumentException ignored) {}
+                    try {
+                        CluedoConstants.Room.valueOf(playerHandCards.get(i).getComponentName());
+                        hiddenRoomsCount++;
+                    } catch (IllegalArgumentException ignored) {}
+
+
+                }
             }
         }
-        return score;
+
+        // Having a low number of possible answers is preferable
+        return (6*6*9 - (hiddenCharactersCount * hiddenWeaponsCount * hiddenRoomsCount));
     }
 
     @Override
