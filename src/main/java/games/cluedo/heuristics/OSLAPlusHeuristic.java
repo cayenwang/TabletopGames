@@ -10,19 +10,19 @@ import players.simple.OSLAPlayer;
 import java.util.List;
 
 
-// This agent ignores re-guessing cards it's already seen, but otherwise guesses randomly, only accusing when certain
-public class RandomPlusHeuristic extends TunableParameters {
+// This agent ignores re-guessing cards it's already seen, but otherwise guesses according to the gameState heuristic, only accusing when certain
+public class OSLAPlusHeuristic extends TunableParameters {
 
     private IStateHeuristic heuristic = this::evaluateState;
 
-    public RandomPlusHeuristic() {
+    public OSLAPlusHeuristic() {
         addTunableParameter("heuristic", (IStateHeuristic) this::evaluateState);
         _reset();
     }
 
     @Override
     protected AbstractParameters _copy() {
-        RandomPlusHeuristic retValue = new RandomPlusHeuristic();
+        OSLAPlusHeuristic retValue = new OSLAPlusHeuristic();
         retValue.heuristic = heuristic;
         return retValue;
     }
@@ -39,8 +39,8 @@ public class RandomPlusHeuristic extends TunableParameters {
 
     @Override
     protected boolean _equals(Object o) {
-        if (o instanceof RandomPlusHeuristic) {
-           RandomPlusHeuristic other = (RandomPlusHeuristic) o;
+        if (o instanceof OSLAPlusHeuristic) {
+           OSLAPlusHeuristic other = (OSLAPlusHeuristic) o;
            return other.heuristic.equals(heuristic);
         }
         return false;
@@ -64,7 +64,7 @@ public class RandomPlusHeuristic extends TunableParameters {
             else return -1;
         }
 
-        // If the agent guesses a card it's seen before, return -1, else return 1
+        // If the agent guesses a card it's seen before, return -1, else return the gameState heuristic value
         if ((cgs.getGamePhase() == CluedoGameState.CluedoGamePhase.makeSuggestion
             || cgs.getGamePhase() == CluedoGameState.CluedoGamePhase.makeAccusation)
             && cgs.currentGuess.getSize() != 0) {
@@ -76,7 +76,7 @@ public class RandomPlusHeuristic extends TunableParameters {
                     }
                 }
             }
-            return 1;
+            return cgs.getHeuristicScore(playerId);
         }
 
         return 0;

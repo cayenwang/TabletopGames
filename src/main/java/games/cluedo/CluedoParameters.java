@@ -5,8 +5,10 @@ import core.AbstractParameters;
 public class CluedoParameters extends AbstractParameters {
 
     String dataPath = "data/cluedo/";
+    Boolean chooseCharacters = false;
 
     public String getDataPath() { return dataPath; }
+    public Boolean getChooseCharacters() { return chooseCharacters; }
 
     @Override
     protected AbstractParameters _copy() {

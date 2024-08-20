@@ -138,6 +138,14 @@ public class CluedoGameState extends AbstractGameState {
         if (!playerAliveStatus.get(playerId)) return -1;
         if (getPlayerResults()[playerId] == CoreConstants.GameResult.WIN_GAME) return 1;
 
+        List<Integer> hiddenCardCount = getHiddenCardCount(playerId);
+        int possibleCaseFilesCount = hiddenCardCount.get(0) * hiddenCardCount.get(1) * hiddenCardCount.get(2);
+
+        // Having a low number of possible answers is preferable
+        return (6*6*9 - possibleCaseFilesCount);
+    }
+
+    public List<Integer> getHiddenCardCount(int playerId) {
         // Determine how many possible caseFiles match the cards already seen
         int hiddenCharactersCount = 1;
         int hiddenWeaponsCount = 1;
@@ -147,25 +155,21 @@ public class CluedoGameState extends AbstractGameState {
                 boolean visible = playerHandCards.get(i).getVisibilityForPlayer(j, playerId);
                 if (!visible) {
                     try {
-                        CluedoConstants.Character.valueOf(playerHandCards.get(i).getComponentName());
+                        CluedoConstants.Character.valueOf(playerHandCards.get(i).get(j).getComponentName());
                         hiddenCharactersCount++;
                     } catch (IllegalArgumentException ignored) {}
                     try {
-                        CluedoConstants.Weapon.valueOf(playerHandCards.get(i).getComponentName());
+                        CluedoConstants.Weapon.valueOf(playerHandCards.get(i).get(j).getComponentName());
                         hiddenWeaponsCount++;
                     } catch (IllegalArgumentException ignored) {}
                     try {
-                        CluedoConstants.Room.valueOf(playerHandCards.get(i).getComponentName());
+                        CluedoConstants.Room.valueOf(playerHandCards.get(i).get(j).getComponentName());
                         hiddenRoomsCount++;
                     } catch (IllegalArgumentException ignored) {}
-
-
                 }
             }
         }
-
-        // Having a low number of possible answers is preferable
-        return (6*6*9 - (hiddenCharactersCount * hiddenWeaponsCount * hiddenRoomsCount));
+        return List.of(hiddenCharactersCount, hiddenWeaponsCount, hiddenRoomsCount);
     }
 
     @Override

@@ -116,8 +116,17 @@ public class CluedoForwardModel extends StandardForwardModel {
         cgs.allCards.add(randomCharacterCard, new boolean[cgs.getNPlayers()]);
         cgs.allCards.add(randomWeaponCard, new boolean[cgs.getNPlayers()]);
 
-        // Set the first gamePhase to be choosing characters
-        cgs.setGamePhase(CluedoGameState.CluedoGamePhase.chooseCharacter);
+        if (((CluedoParameters) cgs.getGameParameters()).getChooseCharacters()) {
+            // Set the first gamePhase to be choosing characters
+            cgs.setGamePhase(CluedoGameState.CluedoGamePhase.chooseCharacter);
+        } else {
+            // Set the first gamePhase to be making suggestions
+            cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
+            for (int i=0; i<cgs.getNPlayers(); i++) {
+                cgs.characterToPlayerMap.put(i,i);
+            }
+            setPlayerOrder(cgs, cgs.characterToPlayerMap);
+        }
 
         // Set the initial turn order to be ordered by increasing playerId
         for (int i=1; i<cgs.getNPlayers(); i++) {

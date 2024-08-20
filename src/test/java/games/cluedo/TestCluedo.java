@@ -105,7 +105,13 @@ public class TestCluedo {
     @Test
     public void testSetupGamePhase() {
         CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
-        assertEquals(CluedoGameState.CluedoGamePhase.chooseCharacter, cgs.getGamePhase());
+        CluedoParameters cp = (CluedoParameters) cgs.getGameParameters();
+
+        if (cp.getChooseCharacters()) {
+            assertEquals(CluedoGameState.CluedoGamePhase.chooseCharacter, cgs.getGamePhase());
+        } else {
+            assertEquals(CluedoGameState.CluedoGamePhase.makeSuggestion, cgs.getGamePhase());
+        }
     }
 
     // ========== computeAvailableActions ==========
@@ -113,22 +119,26 @@ public class TestCluedo {
     @Test
     public void testComputeAvailableActionsChooseCharactersPhase() {
         CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
-        // Assert the first player can choose any character
-        List<AbstractAction> actions0 = cfm.computeAvailableActions(cgs);
-        assertEquals(List.of(0,1,2,3,4,5), computeAvailableCharacterIndexes(actions0));
+        CluedoParameters cp = (CluedoParameters) cgs.getGameParameters();
 
-        // Populate characterToPlayerMap as if some players have chosen their character
-        for (int i=0;i< cgs.getNPlayers()-1; i++) {
-            cgs.characterToPlayerMap.put(i,i);
-        }
+        if (cp.getChooseCharacters()) {
+            // Assert the first player can choose any character
+            List<AbstractAction> actions0 = cfm.computeAvailableActions(cgs);
+            assertEquals(List.of(0,1,2,3,4,5), computeAvailableCharacterIndexes(actions0));
 
-        // Assert the next player can choose any character not previously chosen
-        List<AbstractAction> actions1 = cfm.computeAvailableActions(cgs);
-        List<Integer> expectedList = new ArrayList<>();
-        for (int i=cgs.getNPlayers()-1; i<6; i++) {
-            expectedList.add(i);
+            // Populate characterToPlayerMap as if some players have chosen their character
+            for (int i=0;i< cgs.getNPlayers()-1; i++) {
+                cgs.characterToPlayerMap.put(i,i);
+            }
+
+            // Assert the next player can choose any character not previously chosen
+            List<AbstractAction> actions1 = cfm.computeAvailableActions(cgs);
+            List<Integer> expectedList = new ArrayList<>();
+            for (int i=cgs.getNPlayers()-1; i<6; i++) {
+                expectedList.add(i);
+            }
+            assertEquals(expectedList, computeAvailableCharacterIndexes(actions1));
         }
-        assertEquals(expectedList, computeAvailableCharacterIndexes(actions1));
     }
 
     @Test
@@ -228,24 +238,27 @@ public class TestCluedo {
     @Test
     public void testAfterActionChooseCharactersPhase() {
         CluedoGameState cgs = (CluedoGameState) cluedo.getGameState();
+        CluedoParameters cp = (CluedoParameters) cgs.getGameParameters();
 
-        for (int i=0; i<cgs.getNPlayers()-1; i++) {
-            cfm.next(cgs, new ChooseCharacter(i, 5-i));
-            // Assert we have moved to the next player
-            assertEquals(i+1, cgs.getCurrentPlayer());
+        if (cp.getChooseCharacters()) {
+            for (int i=0; i<cgs.getNPlayers()-1; i++) {
+                cfm.next(cgs, new ChooseCharacter(i, 5-i));
+                // Assert we have moved to the next player
+                assertEquals(i+1, cgs.getCurrentPlayer());
+            }
+
+            cfm.next(cgs, new ChooseCharacter(cgs.getNPlayers()-1, 6-cgs.getNPlayers()));
+            // After the final player has chosen a character, assert that the gamePhase has changed, and turn order is now by character index
+            assertEquals(CluedoGameState.CluedoGamePhase.makeSuggestion, cgs.getGamePhase());
+
+            Queue<Integer> expectedTurnOrder = new LinkedList<>();
+            for (int i=1; i<cgs.getNPlayers(); i++) {
+                expectedTurnOrder.add(cgs.getNPlayers()-i-1);
+            }
+            expectedTurnOrder.add(cgs.getNPlayers()-1);
+            assertEquals(expectedTurnOrder, cgs.getTurnOrderQueue());
+            assertEquals(cgs.getNPlayers()-1, cgs.getCurrentPlayer());
         }
-
-        cfm.next(cgs, new ChooseCharacter(cgs.getNPlayers()-1, 6-cgs.getNPlayers()));
-        // After the final player has chosen a character, assert that the gamePhase has changed, and turn order is now by character index
-        assertEquals(CluedoGameState.CluedoGamePhase.makeSuggestion, cgs.getGamePhase());
-
-        Queue<Integer> expectedTurnOrder = new LinkedList<>();
-        for (int i=1; i<cgs.getNPlayers(); i++) {
-            expectedTurnOrder.add(cgs.getNPlayers()-i-1);
-        }
-        expectedTurnOrder.add(cgs.getNPlayers()-1);
-        assertEquals(expectedTurnOrder, cgs.getTurnOrderQueue());
-        assertEquals(cgs.getNPlayers()-1, cgs.getCurrentPlayer());
     }
 
     @Test
