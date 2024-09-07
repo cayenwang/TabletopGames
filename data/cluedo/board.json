@@ -1,0 +1,80 @@
+[
+  {
+    "roomCoordinates" :
+            [
+              {
+                "name": ["String","START"],
+                "coordinates": ["Vector2D",[300, 1000]]
+              },
+              {
+                "name": ["String","KITCHEN"],
+                "coordinates": ["Vector2D",[100, 120]]
+              },
+              {
+                "name": ["String","DINING_ROOM"],
+                "coordinates": ["Vector2D",[100, 320]]
+              },
+              {
+                "name": ["String","LOUNGE"],
+                "coordinates": ["Vector2D",[100, 550]]
+              },
+              {
+                "name": ["String","BATHROOM"],
+                "coordinates": ["Vector2D",[300, 550]]
+              },
+              {
+                "name": ["String","STUDY"],
+                "coordinates": ["Vector2D",[500, 550]]
+              },
+              {
+                "name": ["String","LIBRARY"],
+                "coordinates": ["Vector2D",[500, 410]]
+              },
+              {
+                "name": ["String","BILLIARD_ROOM"],
+                "coordinates": ["Vector2D",[500, 265]]
+              },
+              {
+                "name": ["String","CONSERVATORY"],
+                "coordinates": ["Vector2D",[500, 120]]
+              },
+              {
+                "name": ["String","BALLROOM"],
+                "coordinates": ["Vector2D",[300, 120]]
+              }
+            ],
+    "characterColours" :
+            [
+              {
+                "name": ["String","MISS_SCARLETT"],
+                "index": ["Integer",0],
+                "colour": ["Color",[204,0,0]]
+              },
+              {
+                "name": ["String","COL_MUSTARD"],
+                "index": ["Integer",1],
+                "colour": ["Color",[191,144,0]]
+              },
+              {
+                "name": ["String","DR_ORCHID"],
+                "index": ["Integer",2],
+                "colour": ["Color",[194,123,160]]
+              },
+              {
+                "name": ["String","REV_GREEN"],
+                "index": ["Integer",3],
+                "colour": ["Color",[106,168,79]]
+              },
+              {
+                "name": ["String","MRS_PEACOCK"],
+                "index": ["Integer",4],
+                "colour": ["Color",[60,120,216]]
+              },
+              {
+                "name": ["String","PROF_PLUM"],
+                "index": ["Integer",5],
+                "colour": ["Color",[116,27,71]]
+              }
+            ]
+  }
+]
