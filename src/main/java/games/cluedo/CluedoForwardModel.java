@@ -119,6 +119,11 @@ public class CluedoForwardModel extends StandardForwardModel {
         if (((CluedoParameters) cgs.getGameParameters()).getChooseCharacters()) {
             // Set the first gamePhase to be choosing characters
             cgs.setGamePhase(CluedoGameState.CluedoGamePhase.chooseCharacter);
+
+            // Set the initial turn order to be ordered by increasing playerId
+            for (int i=1; i<cgs.getNPlayers(); i++) {
+                cgs.turnOrderQueue.add(i);
+            }
         } else {
             // Set the first gamePhase to be making suggestions
             cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
@@ -126,12 +131,10 @@ public class CluedoForwardModel extends StandardForwardModel {
                 cgs.characterToPlayerMap.put(i,i);
             }
             setPlayerOrder(cgs, cgs.characterToPlayerMap);
+            endRound(cgs, nextPlayer(cgs));
         }
 
-        // Set the initial turn order to be ordered by increasing playerId
-        for (int i=1; i<cgs.getNPlayers(); i++) {
-            cgs.turnOrderQueue.add(i);
-        }
+
     }
 
     @Override

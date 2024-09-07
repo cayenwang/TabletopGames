@@ -70,7 +70,7 @@ public class CluedoGameState extends AbstractGameState {
             copy.characterToPlayerMap.put(i, characterToPlayerMap.get(i));
         }
         copy.characterLocations = new ArrayList<>();
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < CluedoConstants.Character.values().length; i++) {
             copy.characterLocations.add(characterLocations.get(i));
         }
         copy.playerAliveStatus = new ArrayList<>();
@@ -92,13 +92,26 @@ public class CluedoGameState extends AbstractGameState {
 
         if (playerId != -1) {
             // Add all cards that are not visible to the current player into a deck
-            Deck<CluedoCard> unknownCards = new Deck<>("Unknown Cards", CoreConstants.VisibilityMode.HIDDEN_TO_ALL);
+            Deck<CluedoCard> unknownCharacters = new Deck<>("Unknown Characters", CoreConstants.VisibilityMode.HIDDEN_TO_ALL);
+            Deck<CluedoCard> unknownWeapons = new Deck<>("Unknown Weapons", CoreConstants.VisibilityMode.HIDDEN_TO_ALL);
+            Deck<CluedoCard> unknownRooms = new Deck<>("Unknown Rooms", CoreConstants.VisibilityMode.HIDDEN_TO_ALL);
             for (int i = 0; i < nPlayers; i++) {
                 if (i != playerId) {
                     PartialObservableDeck<CluedoCard> playerHand = playerHandCards.get(i);
                     for (int j=0; j<playerHand.getSize(); j++) {
                         if (!playerHand.getVisibilityForPlayer(j, playerId)) {
-                            unknownCards.add((CluedoCard) playerHand.get(j).copy());
+                            String cardType = getTypeOfCard(playerHand.get(j));
+                            switch (cardType) {
+                                case "Character":
+                                    unknownCharacters.add((CluedoCard) playerHand.get(j).copy());
+                                    break;
+                                case "Weapon":
+                                    unknownWeapons.add((CluedoCard) playerHand.get(j).copy());
+                                    break;
+                                case "Room":
+                                    unknownRooms.add((CluedoCard) playerHand.get(j).copy());
+                                    break;
+                            }
                         }
                     }
                 }
@@ -106,17 +119,27 @@ public class CluedoGameState extends AbstractGameState {
 
             // If there are unknown cards in the players' hands, shuffle all the unknown cards around
             // If there aren't unknown cards in the players' hands, then we know what the caseFile is
-            if (unknownCards.getSize() != 0) {
-                unknownCards.add(caseFile);
+            if (unknownCharacters.getSize() != 0 && unknownWeapons.getSize() != 0 && unknownRooms.getSize() != 0) {
+                unknownCharacters.add(caseFile.get(1));
+                unknownWeapons.add(caseFile.get(2));
+                unknownRooms.add(caseFile.get(0));
 
                 // Shuffle deck
-                unknownCards.shuffle(redeterminisationRnd);
+                unknownCharacters.shuffle(redeterminisationRnd);
+                unknownWeapons.shuffle(redeterminisationRnd);
+                unknownRooms.shuffle(redeterminisationRnd);
 
                 // Redistribute shuffled cards
                 copy.caseFile.clear();
-                copy.caseFile.add(unknownCards.draw());
-                copy.caseFile.add(unknownCards.draw());
-                copy.caseFile.add(unknownCards.draw());
+                copy.caseFile.add(unknownRooms.draw());
+                copy.caseFile.add(unknownCharacters.draw());
+                copy.caseFile.add(unknownWeapons.draw());
+
+                Deck<CluedoCard> unknownCards = new Deck<>("Unknown Cards", CoreConstants.VisibilityMode.HIDDEN_TO_ALL);
+                unknownCards.add(unknownCharacters);
+                unknownCards.add(unknownWeapons);
+                unknownCards.add(unknownRooms);
+                unknownRooms.shuffle(redeterminisationRnd);
 
                 for (int i = 0; i < nPlayers; i++) {
                     if (i != playerId) {
@@ -141,8 +164,10 @@ public class CluedoGameState extends AbstractGameState {
         List<Integer> hiddenCardCount = getHiddenCardCount(playerId);
         int possibleCaseFilesCount = hiddenCardCount.get(0) * hiddenCardCount.get(1) * hiddenCardCount.get(2);
 
+        int totalPossibleCaseFiles = CluedoConstants.Character.values().length * CluedoConstants.Weapon.values().length *CluedoConstants.Room.values().length;
+
         // Having a low number of possible answers is preferable
-        return (6*6*9 - possibleCaseFilesCount);
+        return (totalPossibleCaseFiles - possibleCaseFilesCount)/(totalPossibleCaseFiles);
     }
 
     public List<Integer> getHiddenCardCount(int playerId) {
@@ -154,22 +179,40 @@ public class CluedoGameState extends AbstractGameState {
             for (int j = 0; j < playerHandCards.get(i).getSize(); j++) {
                 boolean visible = playerHandCards.get(i).getVisibilityForPlayer(j, playerId);
                 if (!visible) {
-                    try {
-                        CluedoConstants.Character.valueOf(playerHandCards.get(i).get(j).getComponentName());
-                        hiddenCharactersCount++;
-                    } catch (IllegalArgumentException ignored) {}
-                    try {
-                        CluedoConstants.Weapon.valueOf(playerHandCards.get(i).get(j).getComponentName());
-                        hiddenWeaponsCount++;
-                    } catch (IllegalArgumentException ignored) {}
-                    try {
-                        CluedoConstants.Room.valueOf(playerHandCards.get(i).get(j).getComponentName());
-                        hiddenRoomsCount++;
-                    } catch (IllegalArgumentException ignored) {}
+                    String cardType = getTypeOfCard(playerHandCards.get(i).get(j));
+                    switch (cardType) {
+                        case "Character":
+                            hiddenCharactersCount++;
+                            break;
+                        case "Weapon":
+                            hiddenWeaponsCount++;
+                            break;
+                        case "Room":
+                            hiddenRoomsCount++;
+                            break;
+                    }
                 }
             }
         }
         return List.of(hiddenCharactersCount, hiddenWeaponsCount, hiddenRoomsCount);
+    }
+
+    private String getTypeOfCard(CluedoCard card) {
+        try {
+            CluedoConstants.Character.valueOf(card.getComponentName());
+            return "Character";
+        } catch (IllegalArgumentException ignored) {}
+        try {
+            CluedoConstants.Weapon.valueOf(card.getComponentName());
+            return "Weapon";
+        } catch (IllegalArgumentException ignored) {}
+        try {
+            CluedoConstants.Room.valueOf(card.getComponentName());
+            return "Room";
+        } catch (IllegalArgumentException ignored) {}
+
+        System.out.println("No card type found");
+        return "Error";
     }
 
     @Override

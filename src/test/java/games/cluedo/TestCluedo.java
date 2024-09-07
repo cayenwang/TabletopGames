@@ -31,9 +31,9 @@ public class TestCluedo {
         // Feel free to change how many characters this game is set up with
         // The tests should all work with different numbers of players
         players = List.of(
-                new RandomPlayer(),
-                new RandomPlayer(),
-                new RandomPlayer(),
+//                new RandomPlayer(),
+//                new RandomPlayer(),
+//                new RandomPlayer(),
                 new RandomPlayer(),
                 new RandomPlayer(),
                 new RandomPlayer()
@@ -157,7 +157,7 @@ public class TestCluedo {
                 assert(computeAvailableGuessNames(actions0).contains(room.name()));
             }
             // Populate the caseFile as if the player chose a room
-            cgs.currentGuess.add(new CluedoCard(CluedoConstants.Room.LOUNGE));
+            cgs.currentGuess.add(new CluedoCard(CluedoConstants.Room.BALLROOM));
 
             // Assert player can next choose any character
             List<AbstractAction> actions1 = cfm.computeAvailableActions(cgs);
@@ -271,15 +271,15 @@ public class TestCluedo {
         cfm.setPlayerOrder(cgs, cgs.characterToPlayerMap);
         cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeSuggestion);
 
-        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Room.KITCHEN));
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Room.BALLROOM));
         // Assert player 0 has moved to the kitchen
-        assertEquals("KITCHEN", cgs.characterLocations.get(0));
+        assertEquals("BALLROOM", cgs.characterLocations.get(0));
 
         cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Character.DR_ORCHID));
         // Assert Dr Orchid has moved to the kitchen as well
-        assertEquals("KITCHEN", cgs.characterLocations.get(2));
+        assertEquals("BALLROOM", cgs.characterLocations.get(2));
 
-        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Weapon.ROPE));
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Weapon.CANDLESTICK));
         // After the final suggestion has been made, assert that the gamePhase has changed and all players have been added to reactivePlayers
         assertEquals(CluedoGameState.CluedoGamePhase.revealCards, cgs.getGamePhase());
 
@@ -333,9 +333,9 @@ public class TestCluedo {
 
         cgs.setGamePhase(CluedoGameState.CluedoGamePhase.makeAccusation);
         // Assumes the seed doesn't set the case file to be DR_ORCHID, ROPE, KITCHEN (0.3% chance)
-        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Room.KITCHEN));
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Room.BALLROOM));
         cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Character.DR_ORCHID));
-        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Weapon.ROPE));
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Weapon.CANDLESTICK));
 
         // Assert the current player is set to be no longer alive and the game continues
         assertEquals(false, cgs.playerAliveStatus.get(0));
@@ -352,10 +352,10 @@ public class TestCluedo {
         for (int i=1; i<cgs.getNPlayers(); i++) {
             cgs.playerAliveStatus.set(i, false);
         }
-        // Assumes the seed doesn't set the case file to be DR_ORCHID, ROPE, KITCHEN (0.3% chance)
-        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Room.KITCHEN));
+        // Assumes the seed doesn't set the case file to be DR_ORCHID, CANDLESTICK, BALLROOM (0.3% chance)
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Room.BALLROOM));
         cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Character.DR_ORCHID));
-        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Weapon.ROPE));
+        cfm.next(cgs, new GuessPartOfCaseFile(cgs, CluedoConstants.Weapon.CANDLESTICK));
 
         // Assert the game ends and everyone loses
         assertEquals(CoreConstants.GameResult.GAME_END, cgs.getGameStatus());

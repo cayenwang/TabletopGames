@@ -1,7 +1,7 @@
 package games.cluedo.heuristics;
-
 import core.AbstractGameState;
 import core.AbstractParameters;
+import core.AbstractPlayer;
 import core.interfaces.IStateHeuristic;
 import evaluation.optimisation.TunableParameters;
 import games.cluedo.CluedoGameState;
@@ -47,7 +47,7 @@ public class RandomPlusHeuristic extends TunableParameters {
     }
 
     @Override
-    public Object instantiate() {
+    public AbstractPlayer instantiate() {
         return new OSLAPlayer(heuristic);
     }
 
